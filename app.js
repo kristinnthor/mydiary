@@ -13,6 +13,7 @@ const loading = $("loading");
 
 let currentUser = null;
 let editingId = null; // entry id when editing an existing entry
+let savedTags = []; // remembered tags shown as quick-pick chips
 
 /* ===== Auth ===== */
 
@@ -31,7 +32,10 @@ async function init() {
 
   $("save-btn").addEventListener("click", saveEntry);
   $("cancel-edit-btn").addEventListener("click", cancelEdit);
-  $("entry-tags").addEventListener("input", renderTagPreview);
+  $("entry-tags").addEventListener("input", () => {
+    renderTagPreview();
+    renderSavedTags();
+  });
 
   ["filter-from", "filter-to", "filter-tag", "filter-sort"].forEach((id) =>
     $(id).addEventListener("change", loadEntries)
@@ -64,6 +68,7 @@ function applySession(session) {
   }
 
   refreshTagOptions();
+  loadSavedTags();
   loadEntries();
 }
 
@@ -99,6 +104,79 @@ function parseTags(raw) {
 function renderTagPreview() {
   const tags = parseTags($("entry-tags").value);
   $("tag-preview").innerHTML = tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+}
+
+/* ===== Saved tags (remembered across entries) ===== */
+
+async function loadSavedTags() {
+  const { data, error } = await db.from("diary_tags").select("tag").order("tag");
+  if (error) return;
+  savedTags = data.map((r) => r.tag);
+  renderSavedTags();
+}
+
+function renderSavedTags() {
+  $("saved-tags-section").classList.toggle("hidden", !savedTags.length);
+  const active = new Set(parseTags($("entry-tags").value));
+  const container = $("saved-tags");
+  container.replaceChildren();
+
+  for (const tag of savedTags) {
+    const wrap = document.createElement("span");
+    wrap.className = "saved-tag";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = active.has(tag) ? "tag active" : "tag";
+    toggle.textContent = "#" + tag;
+    toggle.title = (active.has(tag) ? "Remove from" : "Add to") + " this entry";
+    toggle.addEventListener("click", () => toggleSavedTag(tag));
+
+    const forget = document.createElement("button");
+    forget.type = "button";
+    forget.className = "tag-x";
+    forget.textContent = "×";
+    forget.title = "Forget this tag";
+    forget.setAttribute("aria-label", "Forget tag " + tag);
+    forget.addEventListener("click", () => forgetTag(tag));
+
+    wrap.append(toggle, forget);
+    container.append(wrap);
+  }
+}
+
+function toggleSavedTag(tag) {
+  const tags = parseTags($("entry-tags").value);
+  const next = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+  $("entry-tags").value = next.join(", ");
+  renderTagPreview();
+  renderSavedTags();
+}
+
+async function forgetTag(tag) {
+  if (!confirm(`Forget the tag “${tag}”? Existing entries keep it.`)) return;
+  const { error } = await db.from("diary_tags").delete().eq("tag", tag);
+  if (error) {
+    alert("Could not remove tag: " + error.message);
+    return;
+  }
+  savedTags = savedTags.filter((t) => t !== tag);
+  renderSavedTags();
+}
+
+async function rememberTags(tags) {
+  if (!tags.length) return;
+  const { error } = await db.from("diary_tags").upsert(
+    tags.map((tag) => ({ user_id: currentUser.id, tag })),
+    { onConflict: "user_id,tag", ignoreDuplicates: true }
+  );
+  if (error) {
+    const status = $("write-status");
+    status.textContent = "Entry saved, but tags could not be remembered: " + error.message;
+    status.classList.add("error");
+    return;
+  }
+  loadSavedTags();
 }
 
 async function saveEntry() {
@@ -146,6 +224,7 @@ async function saveEntry() {
 
   status.textContent = editingId ? "Entry updated ✓" : "Entry saved ✓";
   setTimeout(() => { status.textContent = ""; }, 3000);
+  rememberTags(record.tags);
   resetWriteForm();
   refreshTagOptions();
 }
@@ -157,6 +236,7 @@ function resetWriteForm() {
   $("entry-content").value = "";
   $("entry-tags").value = "";
   $("tag-preview").innerHTML = "";
+  renderSavedTags();
   $("cancel-edit-btn").classList.add("hidden");
   $("save-btn").textContent = "Save entry";
 }
@@ -173,6 +253,7 @@ function startEdit(entry) {
   $("entry-content").value = entry.content;
   $("entry-tags").value = (entry.tags || []).join(", ");
   renderTagPreview();
+  renderSavedTags();
   $("cancel-edit-btn").classList.remove("hidden");
   $("save-btn").textContent = "Update entry";
   showTab("write");
