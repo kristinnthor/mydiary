@@ -13,6 +13,7 @@ const loading = $("loading");
 
 let currentUser = null;
 let editingId = null; // entry id when editing an existing entry
+let savedTags = []; // remembered tags shown as quick-pick chips
 
 /* ===== Auth ===== */
 
@@ -31,7 +32,10 @@ async function init() {
 
   $("save-btn").addEventListener("click", saveEntry);
   $("cancel-edit-btn").addEventListener("click", cancelEdit);
-  $("entry-tags").addEventListener("input", renderTagPreview);
+  $("entry-tags").addEventListener("input", () => {
+    renderTagPreview();
+    renderSavedTags();
+  });
 
   ["filter-from", "filter-to", "filter-tag", "filter-sort"].forEach((id) =>
     $(id).addEventListener("change", loadEntries)
@@ -64,6 +68,7 @@ function applySession(session) {
   }
 
   refreshTagOptions();
+  loadSavedTags();
   loadEntries();
 }
 
@@ -99,6 +104,62 @@ function parseTags(raw) {
 function renderTagPreview() {
   const tags = parseTags($("entry-tags").value);
   $("tag-preview").innerHTML = tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+}
+
+/* ===== Saved tags (remembered across entries) ===== */
+
+async function loadSavedTags() {
+  const { data, error } = await db.from("diary_tags").select("tag").order("tag");
+  if (error) return;
+  savedTags = data.map((r) => r.tag);
+  renderSavedTags();
+}
+
+function renderSavedTags() {
+  $("saved-tags-section").classList.toggle("hidden", !savedTags.length);
+  const active = new Set(parseTags($("entry-tags").value));
+  $("saved-tags").innerHTML = savedTags
+    .map((t) => `
+      <span class="saved-tag">
+        <button type="button" class="tag${active.has(t) ? " active" : ""}" data-toggle-tag="${escapeHtml(t)}" title="${active.has(t) ? "Remove from" : "Add to"} this entry">#${escapeHtml(t)}</button>
+        <button type="button" class="tag-x" data-forget-tag="${escapeHtml(t)}" title="Forget this tag" aria-label="Forget tag ${escapeHtml(t)}">×</button>
+      </span>`)
+    .join("");
+
+  $("saved-tags").querySelectorAll("[data-toggle-tag]").forEach((btn) =>
+    btn.addEventListener("click", () => toggleSavedTag(btn.dataset.toggleTag))
+  );
+  $("saved-tags").querySelectorAll("[data-forget-tag]").forEach((btn) =>
+    btn.addEventListener("click", () => forgetTag(btn.dataset.forgetTag))
+  );
+}
+
+function toggleSavedTag(tag) {
+  const tags = parseTags($("entry-tags").value);
+  const next = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+  $("entry-tags").value = next.join(", ");
+  renderTagPreview();
+  renderSavedTags();
+}
+
+async function forgetTag(tag) {
+  if (!confirm(`Forget the tag “${tag}”? Existing entries keep it.`)) return;
+  const { error } = await db.from("diary_tags").delete().eq("tag", tag);
+  if (error) {
+    alert("Could not remove tag: " + error.message);
+    return;
+  }
+  savedTags = savedTags.filter((t) => t !== tag);
+  renderSavedTags();
+}
+
+async function rememberTags(tags) {
+  if (!tags.length) return;
+  await db.from("diary_tags").upsert(
+    tags.map((tag) => ({ user_id: currentUser.id, tag })),
+    { onConflict: "user_id,tag", ignoreDuplicates: true }
+  );
+  loadSavedTags();
 }
 
 async function saveEntry() {
@@ -146,6 +207,7 @@ async function saveEntry() {
 
   status.textContent = editingId ? "Entry updated ✓" : "Entry saved ✓";
   setTimeout(() => { status.textContent = ""; }, 3000);
+  rememberTags(record.tags);
   resetWriteForm();
   refreshTagOptions();
 }
@@ -157,6 +219,7 @@ function resetWriteForm() {
   $("entry-content").value = "";
   $("entry-tags").value = "";
   $("tag-preview").innerHTML = "";
+  renderSavedTags();
   $("cancel-edit-btn").classList.add("hidden");
   $("save-btn").textContent = "Save entry";
 }
@@ -173,6 +236,7 @@ function startEdit(entry) {
   $("entry-content").value = entry.content;
   $("entry-tags").value = (entry.tags || []).join(", ");
   renderTagPreview();
+  renderSavedTags();
   $("cancel-edit-btn").classList.remove("hidden");
   $("save-btn").textContent = "Update entry";
   showTab("write");

@@ -24,6 +24,11 @@ Backend is [Supabase](https://supabase.com) (project `kristinnthor's Project`, r
 | `tags` | text[] | lowercase tags, GIN-indexed |
 | `created_at` / `updated_at` | timestamptz | |
 
+There is also a `diary_tags` table (`user_id`, `tag`, RLS owner-only) holding each user's
+remembered tags, shown as quick-pick chips in the Write tab. Tags are remembered
+automatically when an entry is saved; forgetting a tag removes it from the chip list
+without touching existing entries.
+
 ## One-time setup (manual steps)
 
 The code and database are ready. Three things must be configured by hand:
