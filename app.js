@@ -118,20 +118,31 @@ async function loadSavedTags() {
 function renderSavedTags() {
   $("saved-tags-section").classList.toggle("hidden", !savedTags.length);
   const active = new Set(parseTags($("entry-tags").value));
-  $("saved-tags").innerHTML = savedTags
-    .map((t) => `
-      <span class="saved-tag">
-        <button type="button" class="tag${active.has(t) ? " active" : ""}" data-toggle-tag="${escapeHtml(t)}" title="${active.has(t) ? "Remove from" : "Add to"} this entry">#${escapeHtml(t)}</button>
-        <button type="button" class="tag-x" data-forget-tag="${escapeHtml(t)}" title="Forget this tag" aria-label="Forget tag ${escapeHtml(t)}">×</button>
-      </span>`)
-    .join("");
+  const container = $("saved-tags");
+  container.replaceChildren();
 
-  $("saved-tags").querySelectorAll("[data-toggle-tag]").forEach((btn) =>
-    btn.addEventListener("click", () => toggleSavedTag(btn.dataset.toggleTag))
-  );
-  $("saved-tags").querySelectorAll("[data-forget-tag]").forEach((btn) =>
-    btn.addEventListener("click", () => forgetTag(btn.dataset.forgetTag))
-  );
+  for (const tag of savedTags) {
+    const wrap = document.createElement("span");
+    wrap.className = "saved-tag";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = active.has(tag) ? "tag active" : "tag";
+    toggle.textContent = "#" + tag;
+    toggle.title = (active.has(tag) ? "Remove from" : "Add to") + " this entry";
+    toggle.addEventListener("click", () => toggleSavedTag(tag));
+
+    const forget = document.createElement("button");
+    forget.type = "button";
+    forget.className = "tag-x";
+    forget.textContent = "×";
+    forget.title = "Forget this tag";
+    forget.setAttribute("aria-label", "Forget tag " + tag);
+    forget.addEventListener("click", () => forgetTag(tag));
+
+    wrap.append(toggle, forget);
+    container.append(wrap);
+  }
 }
 
 function toggleSavedTag(tag) {
@@ -155,10 +166,16 @@ async function forgetTag(tag) {
 
 async function rememberTags(tags) {
   if (!tags.length) return;
-  await db.from("diary_tags").upsert(
+  const { error } = await db.from("diary_tags").upsert(
     tags.map((tag) => ({ user_id: currentUser.id, tag })),
     { onConflict: "user_id,tag", ignoreDuplicates: true }
   );
+  if (error) {
+    const status = $("write-status");
+    status.textContent = "Entry saved, but tags could not be remembered: " + error.message;
+    status.classList.add("error");
+    return;
+  }
   loadSavedTags();
 }
 
