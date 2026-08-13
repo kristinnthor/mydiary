@@ -13,17 +13,18 @@
 
   <!-- ===== Login screen ===== -->
   <div id="auth-screen" class="auth-screen hidden">
+    <button id="lang-toggle-auth" class="btn-ghost lang-corner">IS</button>
     <div class="auth-card">
       <div class="auth-logo">📔</div>
-      <h1>My Diary</h1>
-      <p class="auth-tagline">A quiet place for your days.</p>
+      <h1 data-i18n="appName">My Diary</h1>
+      <p class="auth-tagline" data-i18n="tagline">A quiet place for your days.</p>
       <button id="login-github" class="btn-oauth">
         <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        Continue with GitHub
+        <span data-i18n="loginGithub">Continue with GitHub</span>
       </button>
       <button id="login-google" class="btn-oauth">
         <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Continue with Google
+        <span data-i18n="loginGoogle">Continue with Google</span>
       </button>
     </div>
   </div>
@@ -31,15 +32,16 @@
   <!-- ===== Main app ===== -->
   <div id="app-screen" class="app-screen hidden">
     <header class="topbar">
-      <div class="topbar-brand">📔 <span>My Diary</span></div>
+      <div class="topbar-brand">📔 <span data-i18n="appName">My Diary</span></div>
       <nav class="tabs">
-        <button id="tab-write" class="tab active">Write</button>
-        <button id="tab-diary" class="tab">Full Diary</button>
+        <button id="tab-write" class="tab active" data-i18n="tabWrite">Write</button>
+        <button id="tab-diary" class="tab" data-i18n="tabDiary">Full Diary</button>
       </nav>
       <div class="topbar-user">
         <img id="user-avatar" class="avatar hidden" alt="">
         <span id="user-name"></span>
-        <button id="logout-btn" class="btn-ghost">Sign out</button>
+        <button id="lang-toggle" class="btn-ghost">IS</button>
+        <button id="logout-btn" class="btn-ghost" data-i18n="signOut">Sign out</button>
       </div>
     </header>
 
@@ -47,19 +49,19 @@
     <main id="panel-write" class="panel">
       <div class="write-card">
         <h2 id="write-title">Today's entry</h2>
-        <label class="field-label" for="entry-date">Date</label>
+        <label class="field-label" for="entry-date" data-i18n="date">Date</label>
         <input type="date" id="entry-date">
-        <label class="field-label" for="entry-content">What happened today?</label>
-        <textarea id="entry-content" rows="10" placeholder="Write about your day…"></textarea>
-        <label class="field-label" for="entry-tags">Tags <span class="hint">(comma separated, e.g. travel, family, work)</span></label>
-        <input type="text" id="entry-tags" placeholder="travel, family…">
+        <label class="field-label" for="entry-content" data-i18n="whatHappened">What happened today?</label>
+        <textarea id="entry-content" rows="10" data-i18n-placeholder="contentPlaceholder" placeholder="Write about your day…"></textarea>
+        <label class="field-label" for="entry-tags"><span data-i18n="tags">Tags</span> <span class="hint" data-i18n="tagsHint">(comma separated, e.g. travel, family, work)</span></label>
+        <input type="text" id="entry-tags" data-i18n-placeholder="tagsPlaceholder" placeholder="travel, family…">
         <div id="tag-preview" class="tag-row"></div>
         <div id="saved-tags-section" class="saved-tags hidden">
-          <span class="field-label">Saved tags <span class="hint">(click to add, × to forget — entries keep their tags)</span></span>
+          <span class="field-label"><span data-i18n="savedTags">Saved tags</span> <span class="hint" data-i18n="savedTagsHint">(click to add, × to forget — entries keep their tags)</span></span>
           <div id="saved-tags" class="tag-row"></div>
         </div>
         <div class="write-actions">
-          <button id="cancel-edit-btn" class="btn-ghost hidden">Cancel</button>
+          <button id="cancel-edit-btn" class="btn-ghost hidden" data-i18n="cancel">Cancel</button>
           <button id="save-btn" class="btn-primary">Save entry</button>
         </div>
         <p id="write-status" class="status" role="status"></p>
@@ -70,29 +72,29 @@
     <main id="panel-diary" class="panel hidden">
       <div class="filters">
         <div class="filter-group">
-          <label class="field-label" for="filter-from">From</label>
+          <label class="field-label" for="filter-from" data-i18n="from">From</label>
           <input type="date" id="filter-from">
         </div>
         <div class="filter-group">
-          <label class="field-label" for="filter-to">To</label>
+          <label class="field-label" for="filter-to" data-i18n="to">To</label>
           <input type="date" id="filter-to">
         </div>
         <div class="filter-group grow">
-          <label class="field-label" for="filter-search">Search</label>
-          <input type="search" id="filter-search" placeholder="Search phrases…">
+          <label class="field-label" for="filter-search" data-i18n="search">Search</label>
+          <input type="search" id="filter-search" data-i18n-placeholder="searchPlaceholder" placeholder="Search phrases…">
         </div>
         <div class="filter-group">
-          <label class="field-label" for="filter-tag">Tag</label>
-          <select id="filter-tag"><option value="">All tags</option></select>
+          <label class="field-label" for="filter-tag" data-i18n="tag">Tag</label>
+          <select id="filter-tag"><option value="" data-i18n="allTags">All tags</option></select>
         </div>
         <div class="filter-group">
-          <label class="field-label" for="filter-sort">Order</label>
+          <label class="field-label" for="filter-sort" data-i18n="order">Order</label>
           <select id="filter-sort">
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
+            <option value="desc" data-i18n="newestFirst">Newest first</option>
+            <option value="asc" data-i18n="oldestFirst">Oldest first</option>
           </select>
         </div>
-        <button id="clear-filters" class="btn-ghost">Clear</button>
+        <button id="clear-filters" class="btn-ghost" data-i18n="clear">Clear</button>
       </div>
       <p id="diary-summary" class="diary-summary"></p>
       <div id="entries"></div>
