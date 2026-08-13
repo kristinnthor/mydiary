@@ -129,7 +129,10 @@ const I18N = {
 let lang = localStorage.getItem("mydiary-lang") ||
   ((navigator.language || "").toLowerCase().startsWith("is") ? "is" : "en");
 
-const t = (key) => I18N[lang][key];
+const t = (key, ...args) => {
+  const value = I18N[lang][key];
+  return typeof value === "function" ? value(...args) : value;
+};
 
 function applyLanguage() {
   document.documentElement.lang = lang;
@@ -293,7 +296,7 @@ function renderSavedTags() {
     forget.className = "tag-x";
     forget.textContent = "×";
     forget.title = t("forgetThisTag");
-    forget.setAttribute("aria-label", I18N[lang].forgetTagAria(tag));
+    forget.setAttribute("aria-label", t("forgetTagAria", tag));
     forget.addEventListener("click", () => forgetTag(tag));
 
     wrap.append(toggle, forget);
@@ -310,7 +313,7 @@ function toggleSavedTag(tag) {
 }
 
 async function forgetTag(tag) {
-  if (!confirm(I18N[lang].forgetConfirm(tag))) return;
+  if (!confirm(t("forgetConfirm", tag))) return;
   const { error } = await db.from("diary_tags").delete().eq("tag", tag);
   if (error) {
     alert(t("couldNotRemoveTag") + error.message);
@@ -439,17 +442,17 @@ async function loadEntries() {
   const container = $("entries");
 
   if (error) {
-    container.innerHTML = `<p class="empty-state">${escapeHtml(t("couldNotLoad") + error.message)}</p>`;
+    showEmptyState(container, t("couldNotLoad") + error.message);
     return;
   }
 
   const filtered = from || to || search || tag;
   $("diary-summary").textContent = data.length
-    ? I18N[lang].summary(data.length, !!filtered, tag)
+    ? t("summary", data.length, !!filtered, tag)
     : "";
 
   if (!data.length) {
-    container.innerHTML = `<p class="empty-state">${escapeHtml(filtered ? t("emptyFiltered") : t("emptyNone"))}</p>`;
+    showEmptyState(container, filtered ? t("emptyFiltered") : t("emptyNone"));
     return;
   }
 
@@ -492,6 +495,13 @@ async function loadEntries() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     })
   );
+}
+
+function showEmptyState(container, message) {
+  const p = document.createElement("p");
+  p.className = "empty-state";
+  p.textContent = message;
+  container.replaceChildren(p);
 }
 
 function renderDateGroup(group, search) {
@@ -539,9 +549,16 @@ async function refreshTagOptions() {
   const all = [...new Set(data.flatMap((r) => r.tags || []))].sort();
   const select = $("filter-tag");
   const current = select.value;
-  select.innerHTML =
-    `<option value="" data-i18n="allTags">${escapeHtml(t("allTags"))}</option>` +
-    all.map((t) => `<option value="${escapeHtml(t)}">#${escapeHtml(t)}</option>`).join("");
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.dataset.i18n = "allTags";
+  allOption.textContent = t("allTags");
+  select.replaceChildren(allOption, ...all.map((tag) => {
+    const option = document.createElement("option");
+    option.value = tag;
+    option.textContent = "#" + tag;
+    return option;
+  }));
   if (all.includes(current)) select.value = current;
 }
 
