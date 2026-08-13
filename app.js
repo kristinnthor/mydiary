@@ -276,7 +276,8 @@ async function loadEntries() {
   if (to) query = query.lte("entry_date", to);
   if (search) query = query.ilike("content", "%" + escapeLike(search) + "%");
   if (tag) query = query.contains("tags", [tag]);
-  query = query.order("entry_date", { ascending }).order("created_at", { ascending });
+  // Within a day, parts always read oldest-first so the day's story flows top to bottom.
+  query = query.order("entry_date", { ascending }).order("created_at", { ascending: true });
 
   const { data, error } = await query;
   const container = $("entries");
@@ -298,15 +299,26 @@ async function loadEntries() {
     return;
   }
 
+  // Group consecutive entries that share the same date into one card
+  const groups = [];
+  for (const entry of data) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === entry.entry_date) {
+      last.items.push(entry);
+    } else {
+      groups.push({ date: entry.entry_date, items: [entry] });
+    }
+  }
+
   let html = "";
   let lastMonth = "";
-  for (const entry of data) {
-    const month = monthLabel(entry.entry_date);
+  for (const group of groups) {
+    const month = monthLabel(group.date);
     if (month !== lastMonth) {
       html += `<h3 class="month-heading">${escapeHtml(month)}</h3>`;
       lastMonth = month;
     }
-    html += renderEntry(entry, search);
+    html += renderDateGroup(group, search);
   }
   container.innerHTML = html;
 
@@ -328,21 +340,28 @@ async function loadEntries() {
   );
 }
 
-function renderEntry(entry, search) {
-  const tags = (entry.tags || [])
-    .map((t) => `<button class="tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`)
-    .join("");
-  return `
-    <article class="entry">
-      <div class="entry-head">
-        <h3 class="entry-date">${escapeHtml(dateLabel(entry.entry_date))}</h3>
-        <div class="entry-actions">
+function renderDateGroup(group, search) {
+  const parts = group.items.map((entry) => {
+    const tags = (entry.tags || [])
+      .map((t) => `<button class="tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`)
+      .join("");
+    return `
+      <div class="entry-part">
+        <div class="entry-actions part-actions">
           <button data-edit="${entry.id}">Edit</button>
           <button class="delete" data-delete="${entry.id}">Delete</button>
         </div>
+        <p class="entry-content">${highlight(entry.content, search)}</p>
+        ${tags ? `<div class="tag-row">${tags}</div>` : ""}
+      </div>`;
+  }).join("");
+
+  return `
+    <article class="entry">
+      <div class="entry-head">
+        <h3 class="entry-date">${escapeHtml(dateLabel(group.date))}</h3>
       </div>
-      <p class="entry-content">${highlight(entry.content, search)}</p>
-      ${tags ? `<div class="tag-row">${tags}</div>` : ""}
+      ${parts}
     </article>`;
 }
 
