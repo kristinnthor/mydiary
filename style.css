@@ -71,6 +71,12 @@ h1, h2, h3 { font-family: "Lora", Georgia, serif; }
 
 .btn-oauth:hover { background: #f7f2ea; border-color: #d8ccb9; }
 
+.lang-corner {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+
 /* ===== Top bar ===== */
 .topbar {
   display: flex;

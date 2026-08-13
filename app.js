@@ -7,6 +7,162 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
 
+/* ===== Internationalization ===== */
+
+const I18N = {
+  en: {
+    appName: "My Diary",
+    tagline: "A quiet place for your days.",
+    loginGithub: "Continue with GitHub",
+    loginGoogle: "Continue with Google",
+    tabWrite: "Write",
+    tabDiary: "Full Diary",
+    signOut: "Sign out",
+    todaysEntry: "Today's entry",
+    editEntry: "Edit entry",
+    date: "Date",
+    whatHappened: "What happened today?",
+    contentPlaceholder: "Write about your day…",
+    tags: "Tags",
+    tagsHint: "(comma separated, e.g. travel, family, work)",
+    tagsPlaceholder: "travel, family…",
+    savedTags: "Saved tags",
+    savedTagsHint: "(click to add, × to forget — entries keep their tags)",
+    cancel: "Cancel",
+    saveEntry: "Save entry",
+    updateEntry: "Update entry",
+    from: "From",
+    to: "To",
+    search: "Search",
+    searchPlaceholder: "Search phrases…",
+    tag: "Tag",
+    allTags: "All tags",
+    order: "Order",
+    newestFirst: "Newest first",
+    oldestFirst: "Oldest first",
+    clear: "Clear",
+    edit: "Edit",
+    del: "Delete",
+    writeFirst: "Write something first.",
+    pickDate: "Pick a date for this entry.",
+    saving: "Saving…",
+    saved: "Entry saved ✓",
+    updated: "Entry updated ✓",
+    couldNotSave: "Could not save: ",
+    tagsNotRemembered: "Entry saved, but tags could not be remembered: ",
+    deleteConfirm: "Delete this entry? This cannot be undone.",
+    couldNotDelete: "Could not delete: ",
+    forgetConfirm: (tag) => `Forget the tag “${tag}”? Existing entries keep it.`,
+    couldNotRemoveTag: "Could not remove tag: ",
+    couldNotLoad: "Could not load entries: ",
+    emptyFiltered: "No entries match these filters.",
+    emptyNone: "No entries yet — head to the Write tab and capture your first day.",
+    summary: (n, filtered, tag) =>
+      `${n} ${n === 1 ? "entry" : "entries"}${filtered ? " (filtered)" : ""}${tag ? ` — tag “${tag}”` : ""}`,
+    addToEntry: "Add to this entry",
+    removeFromEntry: "Remove from this entry",
+    forgetThisTag: "Forget this tag",
+    forgetTagAria: (tag) => "Forget tag " + tag,
+    signInFailed: "Sign-in failed: ",
+    locale: "en-GB",
+    toggleLabel: "IS",
+  },
+  is: {
+    appName: "Dagbókin mín",
+    tagline: "Rólegur staður fyrir dagana þína.",
+    loginGithub: "Halda áfram með GitHub",
+    loginGoogle: "Halda áfram með Google",
+    tabWrite: "Skrifa",
+    tabDiary: "Öll dagbókin",
+    signOut: "Útskrá",
+    todaysEntry: "Færsla dagsins",
+    editEntry: "Breyta færslu",
+    date: "Dagsetning",
+    whatHappened: "Hvað gerðist í dag?",
+    contentPlaceholder: "Skrifaðu um daginn þinn…",
+    tags: "Merki",
+    tagsHint: "(aðskilin með kommum, t.d. ferðalög, fjölskylda, vinna)",
+    tagsPlaceholder: "ferðalög, fjölskylda…",
+    savedTags: "Vistuð merki",
+    savedTagsHint: "(smelltu til að bæta við, × til að gleyma — færslur halda merkjum sínum)",
+    cancel: "Hætta við",
+    saveEntry: "Vista færslu",
+    updateEntry: "Uppfæra færslu",
+    from: "Frá",
+    to: "Til",
+    search: "Leita",
+    searchPlaceholder: "Leita að texta…",
+    tag: "Merki",
+    allTags: "Öll merki",
+    order: "Röð",
+    newestFirst: "Nýjast fyrst",
+    oldestFirst: "Elst fyrst",
+    clear: "Hreinsa",
+    edit: "Breyta",
+    del: "Eyða",
+    writeFirst: "Skrifaðu eitthvað fyrst.",
+    pickDate: "Veldu dagsetningu fyrir færsluna.",
+    saving: "Vista…",
+    saved: "Færsla vistuð ✓",
+    updated: "Færsla uppfærð ✓",
+    couldNotSave: "Ekki tókst að vista: ",
+    tagsNotRemembered: "Færslan vistaðist en ekki tókst að muna merkin: ",
+    deleteConfirm: "Eyða þessari færslu? Ekki er hægt að afturkalla það.",
+    couldNotDelete: "Ekki tókst að eyða: ",
+    forgetConfirm: (tag) => `Gleyma merkinu „${tag}“? Færslur sem hafa það halda því.`,
+    couldNotRemoveTag: "Ekki tókst að fjarlægja merkið: ",
+    couldNotLoad: "Ekki tókst að sækja færslur: ",
+    emptyFiltered: "Engar færslur passa við þessar síur.",
+    emptyNone: "Engar færslur ennþá — farðu í „Skrifa“ og skráðu fyrsta daginn.",
+    summary: (n, filtered, tag) =>
+      `${n} ${n % 10 === 1 && n % 100 !== 11 ? "færsla" : "færslur"}${filtered ? " (síað)" : ""}${tag ? ` — merki „${tag}“` : ""}`,
+    addToEntry: "Bæta við þessa færslu",
+    removeFromEntry: "Fjarlægja úr þessari færslu",
+    forgetThisTag: "Gleyma þessu merki",
+    forgetTagAria: (tag) => "Gleyma merki " + tag,
+    signInFailed: "Innskráning mistókst: ",
+    locale: "is-IS",
+    toggleLabel: "EN",
+  },
+};
+
+let lang = localStorage.getItem("mydiary-lang") ||
+  ((navigator.language || "").toLowerCase().startsWith("is") ? "is" : "en");
+
+const t = (key, ...args) => {
+  const value = I18N[lang][key];
+  return typeof value === "function" ? value(...args) : value;
+};
+
+function applyLanguage() {
+  document.documentElement.lang = lang;
+  document.title = t("appName");
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  $("lang-toggle").textContent = t("toggleLabel");
+  $("lang-toggle-auth").textContent = t("toggleLabel");
+  $("write-title").textContent = editingId ? t("editEntry") : t("todaysEntry");
+  $("save-btn").textContent = editingId ? t("updateEntry") : t("saveEntry");
+
+  if (currentUser) {
+    renderSavedTags();
+    refreshTagOptions();
+    loadEntries();
+  }
+}
+
+function toggleLanguage() {
+  lang = lang === "is" ? "en" : "is";
+  localStorage.setItem("mydiary-lang", lang);
+  applyLanguage();
+}
+
 const authScreen = $("auth-screen");
 const appScreen = $("app-screen");
 const loading = $("loading");
@@ -26,6 +182,8 @@ async function init() {
   $("login-github").addEventListener("click", () => signIn("github"));
   $("login-google").addEventListener("click", () => signIn("google"));
   $("logout-btn").addEventListener("click", () => db.auth.signOut());
+  $("lang-toggle").addEventListener("click", toggleLanguage);
+  $("lang-toggle-auth").addEventListener("click", toggleLanguage);
 
   $("tab-write").addEventListener("click", () => showTab("write"));
   $("tab-diary").addEventListener("click", () => showTab("diary"));
@@ -44,6 +202,7 @@ async function init() {
   $("clear-filters").addEventListener("click", clearFilters);
 
   $("entry-date").value = todayISO();
+  applyLanguage();
 }
 
 function applySession(session) {
@@ -77,7 +236,7 @@ async function signIn(provider) {
     provider,
     options: { redirectTo: window.location.origin + window.location.pathname },
   });
-  if (error) alert("Sign-in failed: " + error.message);
+  if (error) alert(t("signInFailed") + error.message);
 }
 
 /* ===== Tabs ===== */
@@ -129,15 +288,15 @@ function renderSavedTags() {
     toggle.type = "button";
     toggle.className = active.has(tag) ? "tag active" : "tag";
     toggle.textContent = "#" + tag;
-    toggle.title = (active.has(tag) ? "Remove from" : "Add to") + " this entry";
+    toggle.title = active.has(tag) ? t("removeFromEntry") : t("addToEntry");
     toggle.addEventListener("click", () => toggleSavedTag(tag));
 
     const forget = document.createElement("button");
     forget.type = "button";
     forget.className = "tag-x";
     forget.textContent = "×";
-    forget.title = "Forget this tag";
-    forget.setAttribute("aria-label", "Forget tag " + tag);
+    forget.title = t("forgetThisTag");
+    forget.setAttribute("aria-label", t("forgetTagAria", tag));
     forget.addEventListener("click", () => forgetTag(tag));
 
     wrap.append(toggle, forget);
@@ -154,10 +313,10 @@ function toggleSavedTag(tag) {
 }
 
 async function forgetTag(tag) {
-  if (!confirm(`Forget the tag “${tag}”? Existing entries keep it.`)) return;
+  if (!confirm(t("forgetConfirm", tag))) return;
   const { error } = await db.from("diary_tags").delete().eq("tag", tag);
   if (error) {
-    alert("Could not remove tag: " + error.message);
+    alert(t("couldNotRemoveTag") + error.message);
     return;
   }
   savedTags = savedTags.filter((t) => t !== tag);
@@ -172,7 +331,7 @@ async function rememberTags(tags) {
   );
   if (error) {
     const status = $("write-status");
-    status.textContent = "Entry saved, but tags could not be remembered: " + error.message;
+    status.textContent = t("tagsNotRemembered") + error.message;
     status.classList.add("error");
     return;
   }
@@ -185,18 +344,18 @@ async function saveEntry() {
   const status = $("write-status");
 
   if (!content) {
-    status.textContent = "Write something first.";
+    status.textContent = t("writeFirst");
     status.classList.add("error");
     return;
   }
   if (!entryDate) {
-    status.textContent = "Pick a date for this entry.";
+    status.textContent = t("pickDate");
     status.classList.add("error");
     return;
   }
 
   status.classList.remove("error");
-  status.textContent = "Saving…";
+  status.textContent = t("saving");
   $("save-btn").disabled = true;
 
   const record = {
@@ -217,12 +376,12 @@ async function saveEntry() {
   $("save-btn").disabled = false;
 
   if (error) {
-    status.textContent = "Could not save: " + error.message;
+    status.textContent = t("couldNotSave") + error.message;
     status.classList.add("error");
     return;
   }
 
-  status.textContent = editingId ? "Entry updated ✓" : "Entry saved ✓";
+  status.textContent = editingId ? t("updated") : t("saved");
   setTimeout(() => { status.textContent = ""; }, 3000);
   rememberTags(record.tags);
   resetWriteForm();
@@ -231,14 +390,14 @@ async function saveEntry() {
 
 function resetWriteForm() {
   editingId = null;
-  $("write-title").textContent = "Today's entry";
+  $("write-title").textContent = t("todaysEntry");
   $("entry-date").value = todayISO();
   $("entry-content").value = "";
   $("entry-tags").value = "";
   $("tag-preview").innerHTML = "";
   renderSavedTags();
   $("cancel-edit-btn").classList.add("hidden");
-  $("save-btn").textContent = "Save entry";
+  $("save-btn").textContent = t("saveEntry");
 }
 
 function cancelEdit() {
@@ -248,14 +407,14 @@ function cancelEdit() {
 
 function startEdit(entry) {
   editingId = entry.id;
-  $("write-title").textContent = "Edit entry";
+  $("write-title").textContent = t("editEntry");
   $("entry-date").value = entry.entry_date;
   $("entry-content").value = entry.content;
   $("entry-tags").value = (entry.tags || []).join(", ");
   renderTagPreview();
   renderSavedTags();
   $("cancel-edit-btn").classList.remove("hidden");
-  $("save-btn").textContent = "Update entry";
+  $("save-btn").textContent = t("updateEntry");
   showTab("write");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -283,19 +442,17 @@ async function loadEntries() {
   const container = $("entries");
 
   if (error) {
-    container.innerHTML = `<p class="empty-state">Could not load entries: ${escapeHtml(error.message)}</p>`;
+    showEmptyState(container, t("couldNotLoad") + error.message);
     return;
   }
 
   const filtered = from || to || search || tag;
   $("diary-summary").textContent = data.length
-    ? `${data.length} ${data.length === 1 ? "entry" : "entries"}${filtered ? " (filtered)" : ""}${tag ? ` — tag “${tag}”` : ""}`
+    ? t("summary", data.length, !!filtered, tag)
     : "";
 
   if (!data.length) {
-    container.innerHTML = `<p class="empty-state">${filtered
-      ? "No entries match these filters."
-      : "No entries yet — head to the Write tab and capture your first day."}</p>`;
+    showEmptyState(container, filtered ? t("emptyFiltered") : t("emptyNone"));
     return;
   }
 
@@ -340,6 +497,13 @@ async function loadEntries() {
   );
 }
 
+function showEmptyState(container, message) {
+  const p = document.createElement("p");
+  p.className = "empty-state";
+  p.textContent = message;
+  container.replaceChildren(p);
+}
+
 function renderDateGroup(group, search) {
   const parts = group.items.map((entry) => {
     const tags = (entry.tags || [])
@@ -348,8 +512,8 @@ function renderDateGroup(group, search) {
     return `
       <div class="entry-part">
         <div class="entry-actions part-actions">
-          <button data-edit="${entry.id}">Edit</button>
-          <button class="delete" data-delete="${entry.id}">Delete</button>
+          <button data-edit="${entry.id}">${escapeHtml(t("edit"))}</button>
+          <button class="delete" data-delete="${entry.id}">${escapeHtml(t("del"))}</button>
         </div>
         <p class="entry-content">${highlight(entry.content, search)}</p>
         ${tags ? `<div class="tag-row">${tags}</div>` : ""}
@@ -366,10 +530,10 @@ function renderDateGroup(group, search) {
 }
 
 async function deleteEntry(id) {
-  if (!confirm("Delete this entry? This cannot be undone.")) return;
+  if (!confirm(t("deleteConfirm"))) return;
   const { error } = await db.from("diary_entries").delete().eq("id", id);
   if (error) {
-    alert("Could not delete: " + error.message);
+    alert(t("couldNotDelete") + error.message);
     return;
   }
   loadEntries();
@@ -385,9 +549,16 @@ async function refreshTagOptions() {
   const all = [...new Set(data.flatMap((r) => r.tags || []))].sort();
   const select = $("filter-tag");
   const current = select.value;
-  select.innerHTML =
-    '<option value="">All tags</option>' +
-    all.map((t) => `<option value="${escapeHtml(t)}">#${escapeHtml(t)}</option>`).join("");
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.dataset.i18n = "allTags";
+  allOption.textContent = t("allTags");
+  select.replaceChildren(allOption, ...all.map((tag) => {
+    const option = document.createElement("option");
+    option.value = tag;
+    option.textContent = "#" + tag;
+    return option;
+  }));
   if (all.includes(current)) select.value = current;
 }
 
@@ -407,14 +578,27 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/* Icelandic dates are formatted by hand — Intl's is-IS data is missing in
+   some browsers and silently falls back to English. */
+const IS_DAYS = ["sunnudagur", "mánudagur", "þriðjudagur", "miðvikudagur", "fimmtudagur", "föstudagur", "laugardagur"];
+const IS_MONTHS = ["janúar", "febrúar", "mars", "apríl", "maí", "júní", "júlí", "ágúst", "september", "október", "nóvember", "desember"];
+
 function dateLabel(iso) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
+  const d = new Date(iso + "T00:00:00");
+  if (lang === "is") {
+    return `${IS_DAYS[d.getDay()]}, ${d.getDate()}. ${IS_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return d.toLocaleDateString(t("locale"), {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 }
 
 function monthLabel(iso) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
+  const d = new Date(iso + "T00:00:00");
+  if (lang === "is") {
+    return `${IS_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return d.toLocaleDateString(t("locale"), {
     month: "long", year: "numeric",
   });
 }
