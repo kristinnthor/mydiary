@@ -623,7 +623,9 @@ function exportView() {
     alert(t("nothingToExport"));
     return;
   }
-  const blob = new Blob([buildExportText()], { type: "text/plain;charset=utf-8" });
+  // The BOM makes Windows Notepad and older mail apps detect UTF-8, so
+  // Icelandic characters survive outside the browser.
+  const blob = new Blob(["\uFEFF" + buildExportText()], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -644,7 +646,7 @@ async function shareView() {
   try {
     // Native share sheet with the .txt attached (mobile email, WhatsApp, etc.)
     if (typeof File !== "undefined" && navigator.canShare) {
-      const file = new File([text], exportFileName(), { type: "text/plain" });
+      const file = new File(["\uFEFF" + text], exportFileName(), { type: "text/plain;charset=utf-8" });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: t("appName") });
         return;
