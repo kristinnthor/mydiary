@@ -477,6 +477,8 @@ async function loadEntries() {
 
   const filtered = from || to || search || tag;
   lastView = { entries: data, filters: { from, to, search, tag } };
+  $("export-btn").disabled = !data.length;
+  $("share-btn").disabled = !data.length;
   $("diary-summary").textContent = data.length
     ? t("summary", data.length, !!filtered, tag)
     : "";
@@ -638,13 +640,15 @@ async function shareView() {
     return;
   }
   const text = buildExportText();
-  const file = new File([text], exportFileName(), { type: "text/plain" });
 
   try {
     // Native share sheet with the .txt attached (mobile email, WhatsApp, etc.)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: t("appName") });
-      return;
+    if (typeof File !== "undefined" && navigator.canShare) {
+      const file = new File([text], exportFileName(), { type: "text/plain" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: t("appName") });
+        return;
+      }
     }
     if (navigator.share) {
       await navigator.share({ title: t("appName"), text });
