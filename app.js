@@ -64,6 +64,16 @@ const I18N = {
     forgetThisTag: "Forget this tag",
     forgetTagAria: (tag) => "Forget tag " + tag,
     signInFailed: "Sign-in failed: ",
+    exportTxt: "Download .txt",
+    share: "Share",
+    nothingToExport: "No entries to export — adjust the filters first.",
+    exportPeriod: "Period",
+    exportFrom: "From",
+    exportTo: "Until",
+    exportTag: "Tag",
+    exportSearch: "Search",
+    exportFileBase: "diary",
+    shareFailed: "Sharing is not supported here — the .txt download works everywhere.",
     locale: "en-GB",
     toggleLabel: "IS",
   },
@@ -121,6 +131,16 @@ const I18N = {
     forgetThisTag: "Gleyma þessu merki",
     forgetTagAria: (tag) => "Gleyma merki " + tag,
     signInFailed: "Innskráning mistókst: ",
+    exportTxt: "Sækja .txt",
+    share: "Deila",
+    nothingToExport: "Engar færslur til að flytja út — breyttu síunum fyrst.",
+    exportPeriod: "Tímabil",
+    exportFrom: "Frá",
+    exportTo: "Til",
+    exportTag: "Merki",
+    exportSearch: "Leit",
+    exportFileBase: "dagbok",
+    shareFailed: "Deiling er ekki studd hér — .txt skráin virkar alls staðar.",
     locale: "is-IS",
     toggleLabel: "EN",
   },
@@ -170,6 +190,7 @@ const loading = $("loading");
 let currentUser = null;
 let editingId = null; // entry id when editing an existing entry
 let savedTags = []; // remembered tags shown as quick-pick chips
+let lastView = { entries: [], filters: {} }; // the currently displayed (filtered) diary view
 
 /* ===== Auth ===== */
 
@@ -200,6 +221,8 @@ async function init() {
   );
   $("filter-search").addEventListener("input", debounce(loadEntries, 350));
   $("clear-filters").addEventListener("click", clearFilters);
+  $("export-btn").addEventListener("click", exportView);
+  $("share-btn").addEventListener("click", shareView);
 
   $("entry-date").value = todayISO();
   applyLanguage();
@@ -453,6 +476,7 @@ async function loadEntries() {
   }
 
   const filtered = from || to || search || tag;
+  lastView = { entries: data, filters: { from, to, search, tag } };
   $("diary-summary").textContent = data.length
     ? t("summary", data.length, !!filtered, tag)
     : "";
@@ -462,16 +486,7 @@ async function loadEntries() {
     return;
   }
 
-  // Group consecutive entries that share the same date into one card
-  const groups = [];
-  for (const entry of data) {
-    const last = groups[groups.length - 1];
-    if (last && last.date === entry.entry_date) {
-      last.items.push(entry);
-    } else {
-      groups.push({ date: entry.entry_date, items: [entry] });
-    }
-  }
+  const groups = groupByDate(data);
 
   let html = "";
   let lastMonth = "";
@@ -501,6 +516,21 @@ async function loadEntries() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     })
   );
+}
+
+/* Group consecutive entries that share the same date (input is already
+   sorted by entry_date, so same-date rows are adjacent). */
+function groupByDate(entries) {
+  const groups = [];
+  for (const entry of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === entry.entry_date) {
+      last.items.push(entry);
+    } else {
+      groups.push({ date: entry.entry_date, items: [entry] });
+    }
+  }
+  return groups;
 }
 
 function showEmptyState(container, message) {
@@ -544,6 +574,90 @@ async function deleteEntry(id) {
   }
   loadEntries();
   refreshTagOptions();
+}
+
+/* ===== Export and share ===== */
+
+function buildExportText() {
+  const { entries, filters } = lastView;
+  const lines = [t("appName")];
+
+  if (filters.from && filters.to) {
+    lines.push(`${t("exportPeriod")}: ${dateLabel(filters.from)} – ${dateLabel(filters.to)}`);
+  } else if (filters.from) {
+    lines.push(`${t("exportFrom")}: ${dateLabel(filters.from)}`);
+  } else if (filters.to) {
+    lines.push(`${t("exportTo")}: ${dateLabel(filters.to)}`);
+  }
+  if (filters.tag) lines.push(`${t("exportTag")}: #${filters.tag}`);
+  if (filters.search) lines.push(`${t("exportSearch")}: “${filters.search}”`);
+  lines.push(t("summary", entries.length, false, ""));
+  lines.push("", "=".repeat(40));
+
+  for (const group of groupByDate(entries)) {
+    lines.push("", dateLabel(group.date), "");
+    group.items.forEach((entry, i) => {
+      if (i > 0) lines.push("", "· · ·", "");
+      lines.push(entry.content.trim());
+      if ((entry.tags || []).length) {
+        lines.push("", entry.tags.map((tag) => "#" + tag).join(" "));
+      }
+    });
+    lines.push("", "-".repeat(40));
+  }
+
+  return lines.join("\n") + "\n";
+}
+
+function exportFileName() {
+  const { filters } = lastView;
+  const range = [filters.from, filters.to].filter(Boolean).join("_");
+  const parts = [t("exportFileBase"), filters.tag, range || todayISO()];
+  return parts.filter(Boolean).join("_").replace(/[^\wæöðþáéíóúý.-]+/gi, "-") + ".txt";
+}
+
+function exportView() {
+  if (!lastView.entries.length) {
+    alert(t("nothingToExport"));
+    return;
+  }
+  const blob = new Blob([buildExportText()], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = exportFileName();
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function shareView() {
+  if (!lastView.entries.length) {
+    alert(t("nothingToExport"));
+    return;
+  }
+  const text = buildExportText();
+  const file = new File([text], exportFileName(), { type: "text/plain" });
+
+  try {
+    // Native share sheet with the .txt attached (mobile email, WhatsApp, etc.)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: t("appName") });
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title: t("appName"), text });
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === "AbortError") return; // user closed the share sheet
+  }
+
+  // Fallback: open an email draft (body capped — mailto URLs have length limits)
+  const body = text.length > 1800 ? text.slice(0, 1800) + "\n…" : text;
+  window.location.href =
+    `mailto:?subject=${encodeURIComponent(t("appName"))}&body=${encodeURIComponent(body)}`;
 }
 
 /* ===== Tag filter options ===== */

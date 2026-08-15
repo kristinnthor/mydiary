@@ -266,7 +266,18 @@ button.tag:hover { background: #e5d7c2; }
 .filter-group.grow { flex: 1 1 180px; }
 .filters .btn-ghost { height: 41px; }
 
-.diary-summary { color: var(--ink-soft); font-size: 14px; margin: 20px 4px 12px; }
+.diary-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 4px 12px;
+}
+
+.diary-summary { color: var(--ink-soft); font-size: 14px; margin: 0; }
+
+.diary-actions { display: flex; gap: 8px; margin-left: auto; }
 
 .entry {
   background: var(--card);
